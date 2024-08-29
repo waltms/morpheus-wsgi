@@ -46,6 +46,8 @@ sudo pip3 install beta_code
 
 The web interface should now be usable as: `https://my-web-site/morpheus?word=πόλις`
 
+By adding `&input=1` (`https://my-web-site/morpheus?word=πόλις&input=1`) to the URL, the interface will add a search box at the top, so that you don't need to need to change the URL for each new search.
+
 The results have a somewhat more readable format than the default `morpheus` output, including use of UTF-8 Greek.
 
 >[!NOTE]
