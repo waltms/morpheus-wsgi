@@ -121,7 +121,10 @@ def morpheus_to_html(morpheus_result, input_box, msg=""):
             result[idx] = ' '.join(tab_sections)
 
     # join with <br>
-    out_html = '<div style="position:relative; margin: 0 auto; display: inline-block; border-radius: 10px; border: 2px solid #800000; padding: 20px;">%s</div>' % '<br>'.join(result)
+    if len(result) > 1:
+        out_html = '<div style="position:relative; margin: 0 auto; display: inline-block; border-radius: 10px; border: 2px solid #800000; padding: 20px;">%s</div>' % '<br>'.join(result)
+    else:
+        out_html = ""
     html = html.replace("%WORDS%", out_html)
     html = html.replace("%MSG%", msg)
     if input_box:
