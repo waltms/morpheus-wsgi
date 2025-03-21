@@ -6,13 +6,13 @@ import beta_code
 
 morpheus_bin = "bin/cruncher"
 morpheus_path = "/var/www/wsgi/morpheus/"
-acceptable_referers = ['your.own.referer.com'] # Your approved list of referers. Only used if need_referer = True
+acceptable_referers = ['anastrophe2.lib.uchicago.edu', 'anastrophe.lib.uchicago.edu', 'logeion.uchicago.edu', 'logeion.org']
 logeion_url = "https://logeion.uchicago.edu/"
 need_referer = False
 
 # You likely won't need to make changes here
 
-exclude_endings = ['perf', 'perf2', 'conj', 'perf_act', 'fut', 'adj', 'aor', 'comp', 'tr', 'primary', 'secondary', 'irreg', 'decl3', 'act', 'reg', 'aor1', 'aor2', 'short', 'pass', 'vow', 'stem', 'contr', 'denom', 'ath', 'g', 'gx', 'gg', 'mp', 'pr'] # pos info that is English-ish
+exclude_endings = ['perf', 'perf2', 'pron', 'adj1', 'suppl', 'conj', 'perf_act', 'fut', 'adj', 'aor', 'comp', 'tr', 'primary', 'secondary', 'irreg', 'perfp', 'decl3', 'act', 'reg', 'aor1', 'aor2', 'short', 'pass', 'vow', 'stem', 'contr', 'denom', 'ath', 'g', 'gx', 'gg', 'mp', 'pr'] # pos info that is English-ish
 
 ### Do not modify below this unless you know what you're doing
 
@@ -45,6 +45,7 @@ def input_check(env):
 
 def word_sanitize(word):
     word = str(word).replace(r'—', '\u0304')
+    #word = re.sub(r'[0-9]*', '', str(word))
     #word = str(word).replace(r'\u00b7', ':')
     return word
 
@@ -58,14 +59,17 @@ def to_greek_endings(grams):
             for ending in endings.split('_'):
                 ending = ending.strip()
                 if ending not in exclude_endings:
+                    #print("(%s)" % ending, file=sys.stderr)
                     new_endings.append("-%s" % beta_code.beta_code_to_greek(ending))
                 else:
                     excluded_found = True
                     new_endings.append(ending)
+                #print(new_endings, file=sys.stderr)
             if not excluded_found:
                 new_gram.append('/'.join(new_endings))
             else:
                 new_gram.append('_'.join(new_endings))
+        #print(new_gram, file=sys.stderr)
         new_grams.append(', '.join(new_gram))
     return ' '.join(new_grams)
 
@@ -73,12 +77,17 @@ def parse_word(word, flags="S"):
     cruncher = os.path.join(morpheus_path, morpheus_bin)
     flags = ' '.join(['-' + f for f in flags])
     command = ' '.join(['echo', '"' + word + '"', '| MORPHLIB=stemlib', cruncher, flags])
-    morpheus = subprocess.run([command], capture_output=True, shell=True, cwd=morpheus_path, encoding='utf8')
+    try:
+        morpheus = subprocess.run([command], capture_output=True, shell=True, cwd=morpheus_path, encoding='utf8')
+    except:
+        return "The request could not be processed."
+    #print(word, file=sys.stderr)
+    #print(morpheus.stdout, file=sys.stderr)
     if morpheus.stdout:
         return str(morpheus.stdout)
     return None
 
-def morpheus_to_html(morpheus_result, input_box):
+def morpheus_to_html(morpheus_result, input_box, msg=""):
 
     path = os.path.join(morpheus_path, "morpheus.html")
     file = open(path, "r")
@@ -101,10 +110,12 @@ def morpheus_to_html(morpheus_result, input_box):
             sections[1] = "%s: " % ', '.join(words)
             result[idx] = ' '.join(sections[1:])
         else:
-            result[idx] = "Search token: %s" % beta_code.beta_code_to_greek(sections[0])
+            if not msg:
+                result[idx] = "Search token: %s" % beta_code.beta_code_to_greek(sections[0])
 
         tab_sections = result[idx].split('\t')
         if len(tab_sections) > 1:
+            #print(tab_sections, file=sys.stderr)
             if tab_sections[1]: tab_sections[1] = "(%s)" % tab_sections[1]
             if "_" in tab_sections[-1]: tab_sections[-1] = to_greek_endings(tab_sections[-1])
             result[idx] = ' '.join(tab_sections)
@@ -112,6 +123,7 @@ def morpheus_to_html(morpheus_result, input_box):
     # join with <br>
     out_html = '<div style="position:relative; margin: 0 auto; display: inline-block; border-radius: 10px; border: 2px solid #800000; padding: 20px;">%s</div>' % '<br>'.join(result)
     html = html.replace("%WORDS%", out_html)
+    html = html.replace("%MSG%", msg)
     if input_box:
         html = html.replace("%DISPLAY%", "")
     else:
@@ -130,9 +142,14 @@ def application(env, start_response):
             if morpheus_result:
                 input_box = input_check(env)
                 result = morpheus_to_html(morpheus_result, input_box)
+                #result = morpheus_result
                 return[bytes(result, 'utf8')]
             else:
-                return[b'Unknown word.']
+                msg = 'Couldn\'t parse: "%s".' % word
+                input_box = input_check(env)
+                result = morpheus_to_html("", input_box, msg)
+                return[bytes(result, 'utf8')]
+                #return[b'Unknown word.']
         else:
             return[b'No word supplied.']
     else:
