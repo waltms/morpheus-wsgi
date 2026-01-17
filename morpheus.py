@@ -12,7 +12,7 @@ need_referer = False
 
 # You likely won't need to make changes here
 
-exclude_endings = ['perf', 'perf2', 'pron', 'adj1', 'suppl', 'conj', 'perf_act', 'fut', 'adj', 'aor', 'comp', 'tr', 'primary', 'secondary', 'irreg', 'perfp', 'decl3', 'act', 'reg', 'aor1', 'aor2', 'short', 'pass', 'vow', 'stem', 'contr', 'denom', 'ath', 'g', 'gx', 'gg', 'mp', 'pr'] # pos info that is English-ish
+exclude_endings = ['art', 'irr', 'indecl', 'noun', 'perf', 'verb', 'adj2', 'perf2', 'pron', 'adj1', 'suppl', 'conj', 'perf_act', 'fut', 'adj', 'aor', 'comp', 'tr', 'primary', 'secondary', 'irreg', 'perfp', 'decl3', 'act', 'reg', 'aor1', 'aor2', 'short', 'pass', 'vow', 'stem', 'contr', 'denom', 'ath', 'g', 'gx', 'gg', 'mp', 'pr'] # pos info that is English-ish
 
 ### Do not modify below this unless you know what you're doing
 
@@ -24,12 +24,20 @@ def referer_check(env):
         return False
     return not need_referer
 
+def word_validate(word):
+    print(word, file=sys.stderr)
+    match = re.search(r'[.: ]', word)
+    if match: 
+       return False
+    return True
+
 def word_check(env):
     params = parse_qs(env['QUERY_STRING'])
-    word = params.get('word')
+    word = params.get('word')[0]
 
+    #if word and word_validate(word):
     if word:
-        word = beta_code.greek_to_beta_code(word[0])
+        word = beta_code.greek_to_beta_code(word)
         #word = escape(word)
         return word
     return False
@@ -74,6 +82,8 @@ def to_greek_endings(grams):
     return ' '.join(new_grams)
 
 def parse_word(word, flags="S"):
+    if not word_validate(word): return None
+
     cruncher = os.path.join(morpheus_path, morpheus_bin)
     flags = ' '.join(['-' + f for f in flags])
     command = ' '.join(['echo', '"' + word + '"', '| MORPHLIB=stemlib', cruncher, flags])
@@ -148,7 +158,7 @@ def application(env, start_response):
                 #result = morpheus_result
                 return[bytes(result, 'utf8')]
             else:
-                msg = 'Couldn\'t parse: "%s".' % word
+                msg = 'Couldn\'t parse: "%s". Tell us about it?' % word
                 input_box = input_check(env)
                 result = morpheus_to_html("", input_box, msg)
                 return[bytes(result, 'utf8')]
