@@ -25,8 +25,10 @@ def referer_check(env):
     return not need_referer
 
 def word_validate(word):
-    print(word, file=sys.stderr)
     match = re.search(r'[.: ]', word)
+    if match: 
+       return False
+    match = re.search(r'^\/', word)
     if match: 
        return False
     return True
@@ -86,9 +88,13 @@ def parse_word(word, flags="S"):
 
     cruncher = os.path.join(morpheus_path, morpheus_bin)
     flags = ' '.join(['-' + f for f in flags])
-    command = ' '.join(['echo', '"' + word + '"', '| MORPHLIB=stemlib', cruncher, flags])
+    #command = ' '.join(['echo', '"' + word + '"', '| MORPHLIB=stemlib', cruncher, flags])
+    #command = ['echo', '"' + word + '"', '| MORPHLIB=stemlib', cruncher, flags]
+    my_env = os.environ.copy()
+    my_env["MORPHLIB"] = "stemlib"
     try:
-        morpheus = subprocess.run([command], capture_output=True, shell=True, cwd=morpheus_path, encoding='utf8')
+        #morpheus = subprocess.run([command], capture_output=True, shell=True, cwd=morpheus_path, encoding='utf8')
+        morpheus = subprocess.run([cruncher, flags], input=word, capture_output=True, shell=False, env=my_env, cwd=morpheus_path, encoding='utf8')
     except:
         return "The request could not be processed."
     #print(word, file=sys.stderr)
