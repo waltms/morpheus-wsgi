@@ -14,6 +14,8 @@ need_referer = False
 
 exclude_endings = ['art', 'irr', 'indecl', 'noun', 'perf', 'verb', 'adj2', 'perf2', 'pron', 'adj1', 'suppl', 'conj', 'perf_act', 'fut', 'adj', 'aor', 'comp', 'tr', 'primary', 'secondary', 'irreg', 'perfp', 'decl3', 'act', 'reg', 'aor1', 'aor2', 'short', 'pass', 'vow', 'stem', 'contr', 'denom', 'ath', 'g', 'gx', 'gg', 'mp', 'pr'] # pos info that is English-ish
 
+exclude_forms = ['indeclform', 'poetic indeclform', 'contr indeclform']
+
 ### Do not modify below this unless you know what you're doing
 
 def referer_check(env):
@@ -62,6 +64,7 @@ def word_sanitize(word):
 def to_greek_endings(grams):
     new_grams = []
     for gram in grams.split(' '):
+        print(gram, file=sys.stderr)
         new_gram = []
         excluded_found = False
         for endings in gram.split(','):
@@ -120,7 +123,16 @@ def morpheus_to_html(morpheus_result, input_box, msg=""):
         if len(sections) > 1:
             words = []
             for word in sections[1].split(','):
+                # split on potential trailing numbers, separate them and rejoin after betacode conversion
+                word_list = re.split(r'(\d+)', word)
+                word_list = [c for c in word_list if c]
+                word = word_list[0]
                 word = beta_code.beta_code_to_greek(word)
+                # most words won't have a trailing number, so use try/except
+                try:
+                    word = word + word_list[1]
+                except:
+                    pass
                 word = word_sanitize(word)
                 words.append('<a href='+ logeion_url + re.sub(r'[0-9]*', '', str(word)) + '>' + word + '</a>')
             sections[1] = "%s: " % ', '.join(words)
@@ -131,9 +143,10 @@ def morpheus_to_html(morpheus_result, input_box, msg=""):
 
         tab_sections = result[idx].split('\t')
         if len(tab_sections) > 1:
-            #print(tab_sections, file=sys.stderr)
             if tab_sections[1]: tab_sections[1] = "(%s)" % tab_sections[1]
             if "_" in tab_sections[-1]: tab_sections[-1] = to_greek_endings(tab_sections[-1])
+
+            tab_sections = [ts for ts in tab_sections if ts not in exclude_forms]
             result[idx] = ' '.join(tab_sections)
 
     # join with <br>
