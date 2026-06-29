@@ -64,7 +64,7 @@ def word_sanitize(word):
 def to_greek_endings(grams):
     new_grams = []
     for gram in grams.split(' '):
-        print(gram, file=sys.stderr)
+        #print(gram, file=sys.stderr)
         new_gram = []
         excluded_found = False
         for endings in gram.split(','):
