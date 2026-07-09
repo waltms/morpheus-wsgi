@@ -101,7 +101,7 @@ def to_greek_endings(grams):
         new_grams.append(', '.join(new_gram))
     return ' '.join(new_grams)
 
-def parse_word(word, flags="S"):
+def parse_word(word, flags="-S"):
     if not word_validate(word): return None
 
     cruncher = os.path.join(morpheus_path, morpheus_bin)
