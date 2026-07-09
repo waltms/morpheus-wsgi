@@ -37,14 +37,29 @@ def word_validate(word):
 
 def word_check(env):
     params = parse_qs(env['QUERY_STRING'])
-    word = params.get('word')[0]
+    try:
+        word = params.get('word')[0]
 
-    #if word and word_validate(word):
-    if word:
-        word = beta_code.greek_to_beta_code(word)
-        #word = escape(word)
-        return word
-    return False
+        #if word and word_validate(word):
+        if word:
+            word = beta_code.greek_to_beta_code(word)
+            #word = escape(word)
+            return word
+        return False
+    except:
+        return False
+
+def options_check(env):
+    params = parse_qs(env['QUERY_STRING'])
+    options = ['-S']
+    try:
+        ignoreaccents = params.get('ignoreaccents')
+        if ignoreaccents: options.append('-n')
+        if options:
+            return options 
+        return False
+    except:
+        return False
 
 def input_check(env):
     params = parse_qs(env['QUERY_STRING'])
@@ -90,17 +105,14 @@ def parse_word(word, flags="S"):
     if not word_validate(word): return None
 
     cruncher = os.path.join(morpheus_path, morpheus_bin)
-    flags = ' '.join(['-' + f for f in flags])
-    #command = ' '.join(['echo', '"' + word + '"', '| MORPHLIB=stemlib', cruncher, flags])
-    #command = ['echo', '"' + word + '"', '| MORPHLIB=stemlib', cruncher, flags]
+    command = [cruncher] + flags
     my_env = os.environ.copy()
     my_env["MORPHLIB"] = "stemlib"
     try:
-        #morpheus = subprocess.run([command], capture_output=True, shell=True, cwd=morpheus_path, encoding='utf8')
-        morpheus = subprocess.run([cruncher, flags], input=word, capture_output=True, shell=False, env=my_env, cwd=morpheus_path, encoding='utf8')
+        #morpheus = subprocess.run([cruncher, '-S', '-n'], input=word, capture_output=True, shell=False, env=my_env, cwd=morpheus_path, encoding='utf8')
+        morpheus = subprocess.run(command, input=word, capture_output=True, shell=False, env=my_env, cwd=morpheus_path, encoding='utf8')
     except:
         return "The request could not be processed."
-    #print(word, file=sys.stderr)
     #print(morpheus.stdout, file=sys.stderr)
     if morpheus.stdout:
         return str(morpheus.stdout)
@@ -169,8 +181,9 @@ def application(env, start_response):
 
     if referer_check(env):
         word = word_check(env)
+        options = options_check(env)
         if word:
-            morpheus_result = parse_word(word)
+            morpheus_result = parse_word(word, options)
             if morpheus_result:
                 input_box = input_check(env)
                 result = morpheus_to_html(morpheus_result, input_box)
